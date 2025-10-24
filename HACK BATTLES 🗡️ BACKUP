@@ -1,0 +1,253 @@
+--// Custom Admin Panel (Mobile Friendly) with Minimize + Close
+--// by Vincenzo
+
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+-- Variables
+local AutoHitAll = false
+local BigHitbox = false
+local Minimized = false
+
+--// ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AdminPanelUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+--// Main Frame
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 350, 0, 300)
+Frame.Position = UDim2.new(0.5, -175, 0.5, -150)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BackgroundTransparency = 0.1
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = Frame
+
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = Frame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+--// Title Text
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -80, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "⚙️ Admin Panel"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextScaled = true
+TitleText.Parent = TitleBar
+
+--// Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 1, 0)
+MinimizeButton.Position = UDim2.new(1, -80, 0, 0)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.Text = "➖"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 150)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextScaled = true
+MinimizeButton.Parent = TitleBar
+
+--// Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 1, 0)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "❌"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextScaled = true
+CloseButton.Parent = TitleBar
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+--// Main Content
+local Content = Instance.new("Frame")
+Content.Size = UDim2.new(1, 0, 0, 260)
+Content.Position = UDim2.new(0, 0, 0, 40)
+Content.BackgroundTransparency = 1
+Content.Parent = Frame
+
+--// BUTTON 1: Auto Hit All
+local Toggle = Instance.new("TextButton")
+Toggle.Size = UDim2.new(0.8, 0, 0, 50)
+Toggle.Position = UDim2.new(0.1, 0, 0.1, 0)
+Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Toggle.Text = "Toggle Auto Hit All"
+Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+Toggle.Font = Enum.Font.GothamBold
+Toggle.TextScaled = true
+Toggle.Parent = Content
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 10)
+ButtonCorner.Parent = Toggle
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, 0, 0, 30)
+Status.Position = UDim2.new(0, 0, 0.33, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "Status: ❌ OFF"
+Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+Status.Font = Enum.Font.GothamBold
+Status.TextScaled = true
+Status.Parent = Content
+
+--// BUTTON 2: Big Hitbox
+local HitboxButton = Instance.new("TextButton")
+HitboxButton.Size = UDim2.new(0.8, 0, 0, 50)
+HitboxButton.Position = UDim2.new(0.1, 0, 0.55, 0)
+HitboxButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+HitboxButton.Text = "Toggle Big Hitbox"
+HitboxButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+HitboxButton.Font = Enum.Font.GothamBold
+HitboxButton.TextScaled = true
+HitboxButton.Parent = Content
+
+local HitboxCorner = Instance.new("UICorner")
+HitboxCorner.CornerRadius = UDim.new(0, 10)
+HitboxCorner.Parent = HitboxButton
+
+local HitboxStatus = Instance.new("TextLabel")
+HitboxStatus.Size = UDim2.new(1, 0, 0, 30)
+HitboxStatus.Position = UDim2.new(0, 0, 0.78, 0)
+HitboxStatus.BackgroundTransparency = 1
+HitboxStatus.Text = "Hitbox: ❌ OFF"
+HitboxStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
+HitboxStatus.Font = Enum.Font.GothamBold
+HitboxStatus.TextScaled = true
+HitboxStatus.Parent = Content
+
+--// Auto Hit All Function
+Toggle.MouseButton1Click:Connect(function()
+	AutoHitAll = not AutoHitAll
+	if AutoHitAll then
+		Toggle.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		Status.Text = "Status: ✅ ON"
+		Status.TextColor3 = Color3.fromRGB(80, 255, 80)
+		task.spawn(function()
+			while AutoHitAll do
+				for _, player in pairs(Players:GetPlayers()) do
+					if player ~= Players.LocalPlayer and player.Character then
+						local args = { player.Character }
+						ReplicatedStorage:WaitForChild("Events"):WaitForChild("HitCharacter"):FireServer(unpack(args))
+					end
+				end
+				task.wait(0.5)
+			end
+		end)
+	else
+		Toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		Status.Text = "Status: ❌ OFF"
+		Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+	end
+end)
+
+--// Big Hitbox Function
+local function enlargeHitbox(character)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root and not character:FindFirstChild("BigHitbox") then
+		local hitbox = Instance.new("Part")
+		hitbox.Name = "BigHitbox"
+		hitbox.Size = Vector3.new(10, 10, 10) -- adjust size here
+		hitbox.Color = Color3.fromRGB(255, 0, 0)
+		hitbox.Transparency = 0.7
+		hitbox.Anchored = false
+		hitbox.CanCollide = false
+		hitbox.Massless = true
+		hitbox.Parent = character
+
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = root
+		weld.Part1 = hitbox
+		weld.Parent = hitbox
+	end
+end
+
+HitboxButton.MouseButton1Click:Connect(function()
+	BigHitbox = not BigHitbox
+	if BigHitbox then
+		HitboxButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		HitboxStatus.Text = "Hitbox: ✅ ON"
+		HitboxStatus.TextColor3 = Color3.fromRGB(80, 255, 80)
+		for _, player in pairs(Players:GetPlayers()) do
+			if player.Character then
+				enlargeHitbox(player.Character)
+			end
+			player.CharacterAdded:Connect(enlargeHitbox)
+		end
+	else
+		HitboxButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		HitboxStatus.Text = "Hitbox: ❌ OFF"
+		HitboxStatus.TextColor3 = Color3.fromRGB(255, 80, 80)
+		for _, player in pairs(Players:GetPlayers()) do
+			if player.Character and player.Character:FindFirstChild("BigHitbox") then
+				player.Character.BigHitbox:Destroy()
+			end
+		end
+	end
+end)
+
+--// Minimize Button
+MinimizeButton.MouseButton1Click:Connect(function()
+	Minimized = not Minimized
+	if Minimized then
+		Content.Visible = false
+		Frame:TweenSize(UDim2.new(0, 350, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		MinimizeButton.Text = "➕"
+	else
+		Frame:TweenSize(UDim2.new(0, 350, 0, 300), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		task.wait(0.3)
+		Content.Visible = true
+		MinimizeButton.Text = "➖"
+	end
+end)
+
+--// Movable (PC + Mobile)
+local dragging = false
+local dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		update(input)
+	end
+end)

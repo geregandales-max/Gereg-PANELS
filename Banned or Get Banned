@@ -1,0 +1,351 @@
+--// ⚙️ Admin Control Panel (Auto Get Wins + Auto Ban)
+--// by Vincenzo
+--// secret script
+
+
+
+--// Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+
+--// Variables
+local Running = true
+local Minimized = false
+local ActiveTab = "Wins"
+local AutoGetWins = false
+local AutoBan = false
+local SelectedPlayer = nil
+local WinPosition = Vector3.new(1.5402417182922363, 2059.072998046875, -104.97501373291016)
+
+--// ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AdminControlUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+--// Main Frame
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 380, 0, 280)
+Frame.Position = UDim2.new(0.5, -190, 0.5, -140)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = Frame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "⚙️ Admin Control Panel"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextScaled = true
+TitleText.Parent = TitleBar
+
+--// Minimize + Close Buttons
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 1, 0)
+MinimizeButton.Position = UDim2.new(1, -80, 0, 0)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.Text = "➖"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 150)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextScaled = true
+MinimizeButton.Parent = TitleBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 1, 0)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "❌"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextScaled = true
+CloseButton.Parent = TitleBar
+
+--// Tab Buttons
+local TabFrame = Instance.new("Frame")
+TabFrame.Size = UDim2.new(1, 0, 0, 40)
+TabFrame.Position = UDim2.new(0, 0, 0, 40)
+TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabFrame.Parent = Frame
+
+local WinsTab = Instance.new("TextButton")
+WinsTab.Size = UDim2.new(0.5, 0, 1, 0)
+WinsTab.Position = UDim2.new(0, 0, 0, 0)
+WinsTab.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+WinsTab.Text = "🏆 Auto Wins"
+WinsTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+WinsTab.Font = Enum.Font.GothamBold
+WinsTab.TextScaled = true
+WinsTab.Parent = TabFrame
+
+local BanTab = Instance.new("TextButton")
+BanTab.Size = UDim2.new(0.5, 0, 1, 0)
+BanTab.Position = UDim2.new(0.5, 0, 0, 0)
+BanTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BanTab.Text = "🔨 Auto Ban"
+BanTab.TextColor3 = Color3.fromRGB(255, 255, 255)
+BanTab.Font = Enum.Font.GothamBold
+BanTab.TextScaled = true
+BanTab.Parent = TabFrame
+
+--// Content Frames
+local WinsContent = Instance.new("Frame")
+WinsContent.Size = UDim2.new(1, 0, 1, -80)
+WinsContent.Position = UDim2.new(0, 0, 0, 80)
+WinsContent.BackgroundTransparency = 1
+WinsContent.Parent = Frame
+
+local BanContent = Instance.new("Frame")
+BanContent.Size = UDim2.new(1, 0, 1, -80)
+BanContent.Position = UDim2.new(0, 0, 0, 80)
+BanContent.BackgroundTransparency = 1
+BanContent.Visible = false
+BanContent.Parent = Frame
+
+-----------------------------
+-- 🏆 AUTO GET WINS CONTENT
+-----------------------------
+local ToggleWins = Instance.new("TextButton")
+ToggleWins.Size = UDim2.new(0.8, 0, 0, 60)
+ToggleWins.Position = UDim2.new(0.1, 0, 0.1, 0)
+ToggleWins.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleWins.Text = "Toggle Auto Get Wins"
+ToggleWins.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleWins.Font = Enum.Font.GothamBold
+ToggleWins.TextScaled = true
+ToggleWins.Parent = WinsContent
+Instance.new("UICorner", ToggleWins).CornerRadius = UDim.new(0, 10)
+
+local StatusWins = Instance.new("TextLabel")
+StatusWins.Size = UDim2.new(1, 0, 0, 40)
+StatusWins.Position = UDim2.new(0, 0, 0.55, 0)
+StatusWins.BackgroundTransparency = 1
+StatusWins.Text = "Status: ❌ OFF"
+StatusWins.TextColor3 = Color3.fromRGB(255, 80, 80)
+StatusWins.Font = Enum.Font.GothamBold
+StatusWins.TextScaled = true
+StatusWins.Parent = WinsContent
+
+-----------------------------
+-- 🔨 AUTO BAN CONTENT
+-----------------------------
+local DropdownFrame = Instance.new("Frame")
+DropdownFrame.Size = UDim2.new(0.8, 0, 0, 100)
+DropdownFrame.Position = UDim2.new(0.1, 0, 0.05, 0)
+DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+DropdownFrame.Parent = BanContent
+Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 10)
+
+local ScrollingFrame = Instance.new("ScrollingFrame")
+ScrollingFrame.Size = UDim2.new(1, 0, 1, 0)
+ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollingFrame.ScrollBarThickness = 6
+ScrollingFrame.BackgroundTransparency = 1
+ScrollingFrame.Parent = DropdownFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 4)
+UIListLayout.Parent = ScrollingFrame
+
+local function refreshPlayers()
+	for _, child in ipairs(ScrollingFrame:GetChildren()) do
+		if child:IsA("TextButton") then child:Destroy() end
+	end
+
+	local function createButton(name)
+		local button = Instance.new("TextButton")
+		button.Size = UDim2.new(1, -4, 0, 30)
+		button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		button.Text = name
+		button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		button.Font = Enum.Font.GothamBold
+		button.TextScaled = true
+		button.Parent = ScrollingFrame
+		Instance.new("UICorner", button).CornerRadius = UDim.new(0, 6)
+
+		button.MouseButton1Click:Connect(function()
+			SelectedPlayer = name
+		end)
+	end
+
+	createButton("All Players")
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= Player then
+			createButton(p.Name)
+		end
+	end
+
+	task.wait(0.1)
+	ScrollingFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
+end
+refreshPlayers()
+
+Players.PlayerAdded:Connect(refreshPlayers)
+Players.PlayerRemoving:Connect(refreshPlayers)
+
+local ToggleBan = Instance.new("TextButton")
+ToggleBan.Size = UDim2.new(0.8, 0, 0, 60)
+ToggleBan.Position = UDim2.new(0.1, 0, 0.55, 0)
+ToggleBan.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleBan.Text = "Toggle Auto Ban"
+ToggleBan.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBan.Font = Enum.Font.GothamBold
+ToggleBan.TextScaled = true
+ToggleBan.Parent = BanContent
+Instance.new("UICorner", ToggleBan).CornerRadius = UDim.new(0, 10)
+
+local StatusBan = Instance.new("TextLabel")
+StatusBan.Size = UDim2.new(1, 0, 0, 40)
+StatusBan.Position = UDim2.new(0, 0, 0.83, 0)
+StatusBan.BackgroundTransparency = 1
+StatusBan.Text = "Status: ❌ OFF"
+StatusBan.TextColor3 = Color3.fromRGB(255, 80, 80)
+StatusBan.Font = Enum.Font.GothamBold
+StatusBan.TextScaled = true
+StatusBan.Parent = BanContent
+
+-----------------------------
+-- BUTTON CONNECTIONS
+-----------------------------
+WinsTab.MouseButton1Click:Connect(function()
+	ActiveTab = "Wins"
+	WinsContent.Visible = true
+	BanContent.Visible = false
+	WinsTab.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+	BanTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+end)
+
+BanTab.MouseButton1Click:Connect(function()
+	ActiveTab = "Ban"
+	WinsContent.Visible = false
+	BanContent.Visible = true
+	BanTab.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+	WinsTab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+end)
+
+ToggleWins.MouseButton1Click:Connect(function()
+	AutoGetWins = not AutoGetWins
+	if AutoGetWins then
+		ToggleWins.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		StatusWins.Text = "Status: 🏃 Active"
+		StatusWins.TextColor3 = Color3.fromRGB(255, 255, 120)
+	else
+		ToggleWins.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		StatusWins.Text = "Status: ❌ OFF"
+		StatusWins.TextColor3 = Color3.fromRGB(255, 80, 80)
+	end
+end)
+
+ToggleBan.MouseButton1Click:Connect(function()
+	AutoBan = not AutoBan
+	if AutoBan then
+		ToggleBan.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+		StatusBan.Text = "Status: 🔨 Active"
+		StatusBan.TextColor3 = Color3.fromRGB(255, 255, 120)
+	else
+		ToggleBan.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		StatusBan.Text = "Status: ❌ OFF"
+		StatusBan.TextColor3 = Color3.fromRGB(255, 80, 80)
+	end
+end)
+
+-----------------------------
+-- MAIN LOOPS
+-----------------------------
+task.spawn(function()
+	while Running do
+		if AutoGetWins then
+			local char = Player.Character or Player.CharacterAdded:Wait()
+			if char and char:FindFirstChild("HumanoidRootPart") then
+				char:MoveTo(WinPosition)
+			end
+		end
+		task.wait(0.5)
+	end
+end)
+
+task.spawn(function()
+	while Running do
+		if AutoBan and SelectedPlayer then
+			if SelectedPlayer == "All Players" then
+				for _, p in ipairs(Players:GetPlayers()) do
+					if p ~= Player then
+						ReplicatedStorage:WaitForChild("BanRequest"):FireServer(p.Name, "Ban5Min")
+					end
+				end
+			else
+				ReplicatedStorage:WaitForChild("BanRequest"):FireServer(SelectedPlayer, "Ban5Min")
+			end
+		end
+		task.wait(1)
+	end
+end)
+
+-----------------------------
+-- UI MOVEMENT + BUTTONS
+-----------------------------
+MinimizeButton.MouseButton1Click:Connect(function()
+	Minimized = not Minimized
+	if Minimized then
+		WinsContent.Visible = false
+		BanContent.Visible = false
+		TabFrame.Visible = false
+		Frame:TweenSize(UDim2.new(0, 380, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		MinimizeButton.Text = "➕"
+	else
+		Frame:TweenSize(UDim2.new(0, 380, 0, 280), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		task.wait(0.3)
+		TabFrame.Visible = true
+		if ActiveTab == "Wins" then
+			WinsContent.Visible = true
+		else
+			BanContent.Visible = true
+		end
+		MinimizeButton.Text = "➖"
+	end
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+	Running = false
+	ScreenGui:Destroy()
+end)
+
+--// Movable
+local dragging = false
+local dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		update(input)
+	end
+end)

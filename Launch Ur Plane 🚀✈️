@@ -1,0 +1,483 @@
+--// 💰 Auto Farm + Upgrade Teleport + Boost Panel (3 Tabs)
+--// by Vincenzo
+
+--// Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+
+--// Main Variables
+local AutoFarm = false
+local AutoTP = false
+local AutoBoost = false
+local SelectedUpgrade = "Upgrade Luck"
+local Running = true
+local Minimized = false
+
+--// Coordinates Table
+local UpgradeLocations = {
+    ["Upgrade Luck"] = Vector3.new(-262.124, 162.658, 224.245),
+    ["Upgrade Wings"] = Vector3.new(-252.07, 162.612, 226.551),
+    ["Upgrade Speed"] = Vector3.new(-241.363, 162.491, 225.754)
+}
+
+--// ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MainFarmUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+--// Frame
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 380, 0, 320)
+Frame.Position = UDim2.new(0.5, -190, 0.5, -160)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+--// Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = Frame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "🗿 GEREG|Launch Ur Plane!✈️"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextScaled = true
+TitleText.Parent = TitleBar
+
+--// Buttons
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 1, 0)
+MinimizeButton.Position = UDim2.new(1, -80, 0, 0)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.Text = "➖"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 150)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextScaled = true
+MinimizeButton.Parent = TitleBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 1, 0)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "❌"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextScaled = true
+CloseButton.Parent = TitleBar
+
+--// Tabs
+local TabButtons = Instance.new("Frame")
+TabButtons.Size = UDim2.new(1, 0, 0, 40)
+TabButtons.Position = UDim2.new(0, 0, 0, 40)
+TabButtons.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabButtons.Parent = Frame
+
+local Tab1 = Instance.new("TextButton")
+Tab1.Size = UDim2.new(1/3, 0, 1, 0)
+Tab1.Text = "auto get money 💰|distance ✈️"
+Tab1.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Tab1.TextColor3 = Color3.fromRGB(255, 255, 255)
+Tab1.Font = Enum.Font.GothamBold
+Tab1.TextScaled = true
+Tab1.Parent = TabButtons
+
+local Tab2 = Instance.new("TextButton")
+Tab2.Size = UDim2.new(1/3, 0, 1, 0)
+Tab2.Position = UDim2.new(1/3, 0, 0, 0)
+Tab2.Text = "🌀 Upgrades"
+Tab2.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Tab2.TextColor3 = Color3.fromRGB(200, 200, 200)
+Tab2.Font = Enum.Font.GothamBold
+Tab2.TextScaled = true
+Tab2.Parent = TabButtons
+
+local Tab3 = Instance.new("TextButton")
+Tab3.Size = UDim2.new(1/3, 0, 1, 0)
+Tab3.Position = UDim2.new(2/3, 0, 0, 0)
+Tab3.Text = "🚀 Boost"
+Tab3.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Tab3.TextColor3 = Color3.fromRGB(200, 200, 200)
+Tab3.Font = Enum.Font.GothamBold
+Tab3.TextScaled = true
+Tab3.Parent = TabButtons
+
+--// Tab Contents
+local Content1 = Instance.new("Frame")
+Content1.Size = UDim2.new(1, 0, 1, -80)
+Content1.Position = UDim2.new(0, 0, 0, 80)
+Content1.BackgroundTransparency = 1
+Content1.Parent = Frame
+
+local Content2 = Instance.new("Frame")
+Content2.Size = Content1.Size
+Content2.Position = Content1.Position
+Content2.BackgroundTransparency = 1
+Content2.Visible = false
+Content2.Parent = Frame
+
+local Content3 = Instance.new("Frame")
+Content3.Size = Content1.Size
+Content3.Position = Content1.Position
+Content3.BackgroundTransparency = 1
+Content3.Visible = false
+Content3.Parent = Frame
+
+--================ TAB 1: AUTO FARM =================--
+local MoneyBox = Instance.new("TextBox")
+MoneyBox.Size = UDim2.new(0.8, 0, 0, 40)
+MoneyBox.Position = UDim2.new(0.1, 0, 0.1, 0)
+MoneyBox.PlaceholderText = "Enter Money Amount 💵"
+MoneyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MoneyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+MoneyBox.Font = Enum.Font.Gotham
+MoneyBox.TextScaled = true
+MoneyBox.Parent = Content1
+Instance.new("UICorner", MoneyBox).CornerRadius = UDim.new(0, 10)
+
+local DistanceBox = Instance.new("TextBox")
+DistanceBox.Size = UDim2.new(0.8, 0, 0, 40)
+DistanceBox.Position = UDim2.new(0.1, 0, 0.3, 0)
+DistanceBox.PlaceholderText = "Enter Distance ✈️"
+DistanceBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+DistanceBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+DistanceBox.Font = Enum.Font.Gotham
+DistanceBox.TextScaled = true
+DistanceBox.Parent = Content1
+Instance.new("UICorner", DistanceBox).CornerRadius = UDim.new(0, 10)
+
+local AutoFarmButton = Instance.new("TextButton")
+AutoFarmButton.Size = UDim2.new(0.8, 0, 0, 60)
+AutoFarmButton.Position = UDim2.new(0.1, 0, 0.55, 0)
+AutoFarmButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+AutoFarmButton.Text = "Toggle Auto Get 💰✈️"
+AutoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarmButton.Font = Enum.Font.GothamBold
+AutoFarmButton.TextScaled = true
+AutoFarmButton.Parent = Content1
+Instance.new("UICorner", AutoFarmButton).CornerRadius = UDim.new(0, 10)
+
+local Status1 = Instance.new("TextLabel")
+Status1.Size = UDim2.new(1, 0, 0, 40)
+Status1.Position = UDim2.new(0, 0, 0.8, 0)
+Status1.BackgroundTransparency = 1
+Status1.Text = "Status: ❌ OFF"
+Status1.TextColor3 = Color3.fromRGB(255, 80, 80)
+Status1.Font = Enum.Font.GothamBold
+Status1.TextScaled = true
+Status1.Parent = Content1
+
+--================ TAB 2: UPGRADES =================--
+local Dropdown = Instance.new("TextButton")
+Dropdown.Size = UDim2.new(0.8, 0, 0, 40)
+Dropdown.Position = UDim2.new(0.1, 0, 0.15, 0)
+Dropdown.Text = "Select Upgrade: " .. SelectedUpgrade
+Dropdown.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
+Dropdown.Font = Enum.Font.GothamBold
+Dropdown.TextScaled = true
+Dropdown.Parent = Content2
+Instance.new("UICorner", Dropdown).CornerRadius = UDim.new(0, 10)
+
+local OptionFrame = Instance.new("Frame")
+OptionFrame.Size = UDim2.new(0.8, 0, 0, 120)
+OptionFrame.Position = UDim2.new(0.1, 0, 0.3, 0)
+OptionFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OptionFrame.Visible = false
+OptionFrame.Parent = Content2
+Instance.new("UICorner", OptionFrame).CornerRadius = UDim.new(0, 10)
+
+local function createOption(name, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Position = UDim2.new(0, 0, 0, (order - 1) * 40)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.Gotham
+    btn.TextScaled = true
+    btn.Parent = OptionFrame
+    btn.MouseButton1Click:Connect(function()
+        SelectedUpgrade = name
+        Dropdown.Text = "Selected: " .. name
+        OptionFrame.Visible = false
+    end)
+end
+
+createOption("Upgrade Luck", 1)
+createOption("Upgrade Wings", 2)
+createOption("Upgrade Speed", 3)
+
+Dropdown.MouseButton1Click:Connect(function()
+    OptionFrame.Visible = not OptionFrame.Visible
+end)
+
+local ToggleTP = Instance.new("TextButton")
+ToggleTP.Size = UDim2.new(0.8, 0, 0, 60)
+ToggleTP.Position = UDim2.new(0.1, 0, 0.6, 0)
+ToggleTP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleTP.Text = "Toggle Auto TP 🌀"
+ToggleTP.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleTP.Font = Enum.Font.GothamBold
+ToggleTP.TextScaled = true
+ToggleTP.Parent = Content2
+Instance.new("UICorner", ToggleTP).CornerRadius = UDim.new(0, 10)
+
+local Status2 = Instance.new("TextLabel")
+Status2.Size = UDim2.new(1, 0, 0, 40)
+Status2.Position = UDim2.new(0, 0, 0.82, 0)
+Status2.BackgroundTransparency = 1
+Status2.Text = "Status: ❌ OFF"
+Status2.TextColor3 = Color3.fromRGB(255, 80, 80)
+Status2.Font = Enum.Font.GothamBold
+Status2.TextScaled = true
+Status2.Parent = Content2
+
+--================ TAB 3: BOOST 🚀 =================--
+local BoostPowerBox = Instance.new("TextBox")
+BoostPowerBox.Size = UDim2.new(0.8, 0, 0, 40)
+BoostPowerBox.Position = UDim2.new(0.1, 0, 0.2, 0)
+BoostPowerBox.PlaceholderText = "Enter Boost Power 💥"
+BoostPowerBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+BoostPowerBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+BoostPowerBox.Font = Enum.Font.Gotham
+BoostPowerBox.TextScaled = true
+BoostPowerBox.Parent = Content3
+Instance.new("UICorner", BoostPowerBox).CornerRadius = UDim.new(0, 10)
+
+local ToggleBoost = Instance.new("TextButton")
+ToggleBoost.Size = UDim2.new(0.8, 0, 0, 60)
+ToggleBoost.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleBoost.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ToggleBoost.Text = "Toggle Auto Boost 🚀"
+ToggleBoost.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleBoost.Font = Enum.Font.GothamBold
+ToggleBoost.TextScaled = true
+ToggleBoost.Parent = Content3
+Instance.new("UICorner", ToggleBoost).CornerRadius = UDim.new(0, 10)
+
+local Status3 = Instance.new("TextLabel")
+Status3.Size = UDim2.new(1, 0, 0, 40)
+Status3.Position = UDim2.new(0, 0, 0.8, 0)
+Status3.BackgroundTransparency = 1
+Status3.Text = "Status: ❌ OFF"
+Status3.TextColor3 = Color3.fromRGB(255, 80, 80)
+Status3.Font = Enum.Font.GothamBold
+Status3.TextScaled = true
+Status3.Parent = Content3
+
+ToggleBoost.MouseButton1Click:Connect(function()
+    AutoBoost = not AutoBoost
+    if AutoBoost then
+        ToggleBoost.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        Status3.Text = "Status: ✅ Boosting..."
+        Status3.TextColor3 = Color3.fromRGB(255, 255, 100)
+        task.spawn(function()
+            while AutoBoost and Running do
+                local boostPower = tonumber(BoostPowerBox.Text) or 300000
+                local args = { boostPower, 3 }
+                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ForwardBoost"):FireServer(unpack(args))
+                task.wait(1)
+            end
+        end)
+    else
+        ToggleBoost.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Status3.Text = "Status: ❌ OFF"
+        Status3.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
+
+--================ BUTTON LOGIC =================--
+AutoFarmButton.MouseButton1Click:Connect(function()
+    AutoFarm = not AutoFarm
+    if AutoFarm then
+        AutoFarmButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        Status1.Text = "Status: ✅ Farming..."
+        Status1.TextColor3 = Color3.fromRGB(255, 255, 100)
+        task.spawn(function()
+            while AutoFarm and Running do
+                local args = {{
+                    money = tonumber(MoneyBox.Text) or 0,
+                    distance = tonumber(DistanceBox.Text) or 0,
+                    landed = false
+                }}
+                ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("FlightComplete"):FireServer(unpack(args))
+                task.wait(0.8)
+            end
+        end)
+    else
+        AutoFarmButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Status1.Text = "Status: ❌ OFF"
+        Status1.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
+
+ToggleTP.MouseButton1Click:Connect(function()
+    AutoTP = not AutoTP
+    if AutoTP then
+        ToggleTP.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        Status2.Text = "Status: ✅ Auto TP to " .. SelectedUpgrade
+        Status2.TextColor3 = Color3.fromRGB(255, 255, 100)
+        task.spawn(function()
+            while AutoTP and Running do
+                local pos = UpgradeLocations[SelectedUpgrade]
+                if pos and Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+                    Player.Character.HumanoidRootPart.CFrame = CFrame.new(pos)
+                end
+                task.wait(0.01)
+            end
+        end)
+    else
+        ToggleTP.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        Status2.Text = "Status: ❌ OFF"
+        Status2.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
+
+--================ TAB SWITCH =================--
+local function switchTab(tab)
+    Content1.Visible = (tab == 1)
+    Content2.Visible = (tab == 2)
+    Content3.Visible = (tab == 3)
+    Tab1.BackgroundColor3 = (tab == 1) and Color3.fromRGB(40,40,40) or Color3.fromRGB(20,20,20)
+    Tab2.BackgroundColor3 = (tab == 2) and Color3.fromRGB(40,40,40) or Color3.fromRGB(20,20,20)
+    Tab3.BackgroundColor3 = (tab == 3) and Color3.fromRGB(40,40,40) or Color3.fromRGB(20,20,20)
+end
+
+Tab1.MouseButton1Click:Connect(function() switchTab(1) end)
+Tab2.MouseButton1Click:Connect(function() switchTab(2) end)
+Tab3.MouseButton1Click:Connect(function() switchTab(3) end)
+
+--================ MINIMIZE & CLOSE =================--
+MinimizeButton.MouseButton1Click:Connect(function()
+    Minimized = not Minimized
+    if Minimized then
+        -- Hide tab contents and buttons, keep title bar visible
+        Content1.Visible = false
+        Content2.Visible = false
+        Content3.Visible = false
+        TabButtons.Visible = false
+        Frame:TweenSize(UDim2.new(0, 380, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        MinimizeButton.Text = "➕"
+    else
+        -- Restore tab buttons and selected tab
+        TabButtons.Visible = true
+        switchTab(1) -- or keep track of last selected tab
+        Frame:TweenSize(UDim2.new(0, 380, 0, 320), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        task.wait(0.3)
+        if Tab1.BackgroundColor3 == Color3.fromRGB(40,40,40) then Content1.Visible = true end
+        if Tab2.BackgroundColor3 == Color3.fromRGB(40,40,40) then Content2.Visible = true end
+        if Tab3.BackgroundColor3 == Color3.fromRGB(40,40,40) then Content3.Visible = true end
+        MinimizeButton.Text = "➖"
+    end
+end)
+
+-- Close Button
+CloseButton.MouseButton1Click:Connect(function()
+    Running = false
+    AutoFarm = false
+    AutoTP = false
+    AutoBoost = false
+    ScreenGui:Destroy()
+end)
+
+--================ DRAGGING (PC + Mobile) =================--
+local dragging = false
+local dragStart = Vector2.zero
+local startPos = UDim2.new(0,0,0,0)
+
+local function updatePosition(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging then
+		if input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch then
+			updatePosition(input)
+		end
+	end
+end)
+
+--================ DRAGGING (PC + Mobile) =================--
+local dragging = false
+local dragStart = Vector2.new(0,0)
+local startPos = UDim2.new(0,0,0,0)
+
+local function updatePosition(input)
+	local delta = input.Position - dragStart
+	Frame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
+end
+
+-- Input began (mouse or touch)
+TitleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 
+		or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+-- Input changed (mouse movement or touch movement)
+TitleBar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+		input.Changed:Connect(function()
+			if dragging then
+				updatePosition(input)
+			end
+		end)
+	end
+end)
+
+-- Global input listener for touch drag (mobile)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging then
+		if input.UserInputType == Enum.UserInputType.MouseMovement 
+			or input.UserInputType == Enum.UserInputType.Touch then
+			updatePosition(input)
+		end
+	end
+end)

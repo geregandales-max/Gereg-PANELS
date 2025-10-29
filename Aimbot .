@@ -1,0 +1,280 @@
+--// 🎯 Aimbot UI (Mobile + PC) - Draggable Toggle + Draggable Visible Circle with Close (Thick Outline + Toggle X)
+--// by Vincenzo
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Config
+local AIM_SMOOTHNESS = 0.25
+local CIRCLE_SIZE = 120
+local SEARCH_MAX_DISTANCE = 2000
+local CIRCLE_SEARCH_RADIUS = CIRCLE_SIZE / 2
+
+-- State
+local AimbotEnabled = false
+local CircleGui, ToggleBtn, ToggleCloseBtn, CircleCloseBtn
+local circleDragging, circleDragInput, circleDragStart, circleStartPos
+local toggleDragging, toggleDragInput, toggleDragStart, toggleStartPos
+
+-- Helpers
+local function isValidTarget(player)
+    if not player.Character then return false end
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart") or player.Character:FindFirstChild("Head")
+    if not hrp then return false end
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid and humanoid.Health <= 0 then return false end
+    return true
+end
+
+local function worldToScreen(point)
+    local v3, onScreen = Camera:WorldToViewportPoint(point)
+    return Vector2.new(v3.X, v3.Y), onScreen, v3.Z
+end
+
+local function findBestTarget(circleCenter)
+    local bestDist, bestPlayer = math.huge, nil
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and isValidTarget(player) then
+            local root = player.Character:FindFirstChild("Head") or player.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local screenPos, onScreen, depth = worldToScreen(root.Position)
+                if onScreen and depth > 0 and depth < SEARCH_MAX_DISTANCE then
+                    local dist = (screenPos - circleCenter).Magnitude
+                    if dist <= CIRCLE_SEARCH_RADIUS and dist < bestDist then
+                        bestDist = dist
+                        bestPlayer = player
+                    end
+                end
+            end
+        end
+    end
+    return bestPlayer
+end
+
+-- UI root
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "VincenzoAimbotUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = game.CoreGui
+
+-- Toggle Button (draggable)
+ToggleBtn = Instance.new("TextButton")
+ToggleBtn.Size = UDim2.new(0, 130, 0, 44)
+ToggleBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+ToggleBtn.Position = UDim2.new(0.5, 0, 0.85, 0)
+ToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+ToggleBtn.TextColor3 = Color3.fromRGB(255,255,255)
+ToggleBtn.Font = Enum.Font.GothamBold
+ToggleBtn.TextScaled = true
+ToggleBtn.Text = "AIM: OFF"
+ToggleBtn.Parent = screenGui
+Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0,10)
+
+-- Add close X to toggle
+ToggleCloseBtn = Instance.new("TextButton")
+ToggleCloseBtn.Size = UDim2.new(0, 22, 0, 22)
+ToggleCloseBtn.Position = UDim2.new(1, -8, 0, -8)
+ToggleCloseBtn.AnchorPoint = Vector2.new(1, 0)
+ToggleCloseBtn.BackgroundTransparency = 1
+ToggleCloseBtn.Text = "✖"
+ToggleCloseBtn.Font = Enum.Font.GothamBold
+ToggleCloseBtn.TextScaled = true
+ToggleCloseBtn.TextColor3 = Color3.fromRGB(255,80,80)
+ToggleCloseBtn.Parent = ToggleBtn
+
+-- Circle creation / destruction
+local function destroyCircle()
+    if CircleGui then
+        CircleGui:Destroy()
+        CircleGui = nil
+        CircleCloseBtn = nil
+    end
+end
+
+local function createCircle()
+    if CircleGui and CircleGui.Parent then return CircleGui end
+
+    CircleGui = Instance.new("Frame")
+    CircleGui.Name = "AimbotCircle"
+    CircleGui.Size = UDim2.new(0, CIRCLE_SIZE, 0, CIRCLE_SIZE)
+    CircleGui.AnchorPoint = Vector2.new(0.5,0.5)
+    CircleGui.Position = UDim2.new(0.5,0,0.5,0)
+    CircleGui.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    CircleGui.BackgroundTransparency = 0.08 -- near-opaque fill
+    CircleGui.BorderSizePixel = 0
+    CircleGui.Parent = screenGui
+
+    local corner = Instance.new("UICorner", CircleGui)
+    corner.CornerRadius = UDim.new(1,0)
+
+    -- Thick outline using UIStroke
+    local stroke = Instance.new("UIStroke", CircleGui)
+    stroke.Thickness = 6
+    stroke.Color = Color3.fromRGB(40,40,40)
+    stroke.Transparency = 0
+
+    -- Close X for circle (top-right outside)
+    CircleCloseBtn = Instance.new("TextButton")
+    CircleCloseBtn.Size = UDim2.new(0, 26, 0, 26)
+    CircleCloseBtn.Position = UDim2.new(1, 6, 0, -6)
+    CircleCloseBtn.AnchorPoint = Vector2.new(0, 0)
+    CircleCloseBtn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    CircleCloseBtn.BackgroundTransparency = 0.85
+    CircleCloseBtn.Text = "✖"
+    CircleCloseBtn.Font = Enum.Font.GothamBold
+    CircleCloseBtn.TextScaled = true
+    CircleCloseBtn.TextColor3 = Color3.fromRGB(200,40,40)
+    CircleCloseBtn.Parent = CircleGui
+
+    -- Close logic
+    CircleCloseBtn.MouseButton1Click:Connect(function()
+        destroyCircle()
+        -- also disable aimbot if it was on
+        if AimbotEnabled then
+            AimbotEnabled = false
+            if ToggleBtn and ToggleBtn.Parent then
+                ToggleBtn.Text = "AIM: OFF"
+                ToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+            end
+        end
+    end)
+
+    return CircleGui
+end
+
+-- Aimbot toggle
+local function setAimbot(state)
+    AimbotEnabled = state
+    if AimbotEnabled then
+        ToggleBtn.Text = "AIM: ON"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+        createCircle()
+    else
+        ToggleBtn.Text = "AIM: OFF"
+        ToggleBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        destroyCircle()
+    end
+end
+
+-- Toggle button click
+ToggleBtn.MouseButton1Click:Connect(function()
+    setAimbot(not AimbotEnabled)
+end)
+
+-- Toggle close X behavior: completely remove toggle and circle
+ToggleCloseBtn.MouseButton1Click:Connect(function()
+    -- destroy circle and disable aimbot
+    setAimbot(false)
+    -- remove toggle itself
+    if ToggleBtn then
+        ToggleBtn:Destroy()
+        ToggleBtn = nil
+        ToggleCloseBtn = nil
+    end
+end)
+
+-- Draggable toggle (mobile + PC)
+do
+    local function updateToggle(input)
+        local delta = input.Position - toggleDragStart
+        if ToggleBtn then
+            ToggleBtn.Position = UDim2.new(
+                toggleStartPos.X.Scale, toggleStartPos.X.Offset + delta.X,
+                toggleStartPos.Y.Scale, toggleStartPos.Y.Offset + delta.Y
+            )
+        end
+    end
+
+    ToggleBtn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            toggleDragging = true
+            toggleDragStart = input.Position
+            toggleStartPos = ToggleBtn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    toggleDragging = false
+                end
+            end)
+        end
+    end)
+
+    ToggleBtn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            toggleDragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == toggleDragInput and toggleDragging then
+            updateToggle(input)
+        end
+    end)
+end
+
+-- Draggable circle (connects each time circle created)
+do
+    local function updateCircle(input)
+        local delta = input.Position - circleDragStart
+        if CircleGui then
+            CircleGui.Position = UDim2.new(
+                circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X,
+                circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y
+            )
+        end
+    end
+
+    local function connectCircleDrag()
+        if not CircleGui then return end
+
+        CircleGui.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                circleDragging = true
+                circleDragStart = input.Position
+                circleStartPos = CircleGui.Position
+                circleDragInput = input
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        circleDragging = false
+                    end
+                end)
+            end
+        end)
+
+        CircleGui.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                circleDragInput = input
+            end
+        end)
+    end
+
+    -- override createCircle to attach drag after creation
+    local oldCreate = createCircle
+    createCircle = function()
+        local circ = oldCreate()
+        task.defer(connectCircleDrag)
+        return circ
+    end
+end
+
+-- Aim behavior
+RunService.RenderStepped:Connect(function(dt)
+    if not AimbotEnabled or not CircleGui or not Camera then return end
+    local circleAbsPos = CircleGui.AbsolutePosition + Vector2.new(CircleGui.AbsoluteSize.X/2, CircleGui.AbsoluteSize.Y/2)
+    local targetPlayer = findBestTarget(circleAbsPos)
+    if targetPlayer and targetPlayer.Character then
+        local head = targetPlayer.Character:FindFirstChild("Head") or targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if head then
+            local camPos = Camera.CFrame.Position
+            local desired = CFrame.new(camPos, head.Position)
+            local current = Camera.CFrame
+            Camera.CFrame = current:Lerp(desired, math.clamp(1 - AIM_SMOOTHNESS, 0, 1) * dt * 60)
+        end
+    end
+end)
+
+-- start disabled
+setAimbot(false)
+print("✅ Aimbot loaded — visible circle with thick outline + X on circle and toggle. Both draggable.")

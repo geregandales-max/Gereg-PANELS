@@ -1,0 +1,277 @@
+--// 🌍 Auto TP Panel (Disco + Crim Base + Pyramid + Bank + Clover Dropdown)
+--// by Vincenzo
+
+--// Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+
+--// Variables
+local Running = true
+local Minimized = false
+local AutoTPs = {
+["Disco"] = false,
+["Crim Base"] = false,
+["Pyramid"] = false,
+["Bank"] = false
+}
+
+--// Teleport Locations
+local Locations = {
+["Disco"] = Vector3.new(1127.5223388671875, 175.5013885498047, 11.476280212402344),
+["Crim Base"] = Vector3.new(2103.1357421875, 25.946945190429688, 427.00579833984375),
+["Pyramid"] = Vector3.new(1014.3367919921875, 51069.1484375, 561.9721069335938),
+["Bank"] = Vector3.new(728.3108520507812, 109.20635986328125, 532.3035278320312),
+["Clover Lever 1"] = Vector3.new(1644.2733154296875, 40.228485107421875, 447.34747314453125),
+["Clover Lever 2"] = Vector3.new(1621.309814453125, 41.150726318359375, 482.7778015136719),
+["Clover Lever 3"] = Vector3.new(1744.35400390625, 44.055564880371094, 446.07635498046875),
+["Clover Lever 4"] = Vector3.new(1761.22119140625, 43.104225158691406, 496.2900390625),
+["Clover Bank"] = Vector3.new(1684.755615234375, 41.041107177734375, 520.76416015625)
+}
+
+local function isNear(pos1, pos2, threshold)
+return (pos1 - pos2).Magnitude <= threshold
+end
+
+--// UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VincenzoAutoTP"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 380, 0, 420)
+Frame.Position = UDim2.new(0.5, -190, 0.5, -210)
+Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+--// Title
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = Frame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(1, -120, 1, 0)
+TitleText.Position = UDim2.new(0, 10, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "Vincenzo's Auto TP Panel 🌍"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextScaled = true
+TitleText.Parent = TitleBar
+
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 1, 0)
+MinimizeButton.Position = UDim2.new(1, -80, 0, 0)
+MinimizeButton.BackgroundTransparency = 1
+MinimizeButton.Text = "➖"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 150)
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.TextScaled = true
+MinimizeButton.Parent = TitleBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 1, 0)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "❌"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextScaled = true
+CloseButton.Parent = TitleBar
+
+--// Status
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, 0, 0, 40)
+Status.Position = UDim2.new(0, 0, 0.88, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "Status: ❌ OFF"
+Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+Status.Font = Enum.Font.GothamBold
+Status.TextScaled = true
+Status.Parent = Frame
+
+--// Buttons
+local function createTPButton(name, order)
+local YPos = 0.12 + (order - 1) * 0.12
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0.8, 0, 0, 45)
+Button.Position = UDim2.new(0.1, 0, YPos, 0)
+Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Button.Text = "Toggle Auto TP to " .. name
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextScaled = true
+Button.Parent = Frame
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10)
+
+Button.MouseButton1Click:Connect(function()  
+	for k in pairs(AutoTPs) do  
+		if k ~= name then AutoTPs[k] = false end  
+	end  
+	AutoTPs[name] = not AutoTPs[name]  
+
+	if AutoTPs[name] then  
+		Button.BackgroundColor3 = Color3.fromRGB(0, 170, 0)  
+		Status.Text = "Status: 🌀 Teleporting to " .. name .. "..."  
+		Status.TextColor3 = Color3.fromRGB(255, 255, 100)  
+		task.spawn(function()  
+			local target = Locations[name]  
+			while AutoTPs[name] and Running do  
+				local char = Player.Character  
+				if char and char:FindFirstChild("HumanoidRootPart") then  
+					local root = char.HumanoidRootPart  
+					if not isNear(root.Position, target, 5) then  
+						root.CFrame = CFrame.new(target)  
+					else  
+						Status.Text = "Status: ✅ Successfully TP’d (" .. name .. ")"  
+						Status.TextColor3 = Color3.fromRGB(100, 255, 100)  
+						Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)  
+						AutoTPs[name] = false  
+						break  
+					end  
+				end  
+				task.wait(1)  
+			end  
+		end)  
+	else  
+		Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)  
+		Status.Text = "Status: ❌ OFF"  
+		Status.TextColor3 = Color3.fromRGB(255, 80, 80)  
+	end  
+end)
+
+end
+
+createTPButton("Disco", 1)
+createTPButton("Crim Base", 2)
+createTPButton("Pyramid", 3)
+createTPButton("Bank", 4)
+
+--// Dropdown for Clover
+local CloverFrame = Instance.new("Frame")
+CloverFrame.Size = UDim2.new(0.8, 0, 0, 80)
+CloverFrame.Position = UDim2.new(0.1, 0, 0.62, 0)
+CloverFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+CloverFrame.Parent = Frame
+Instance.new("UICorner", CloverFrame).CornerRadius = UDim.new(0, 10)
+
+local CloverTitle = Instance.new("TextLabel")
+CloverTitle.Size = UDim2.new(1, 0, 0, 25)
+CloverTitle.Position = UDim2.new(0, 0, 0, 0)
+CloverTitle.BackgroundTransparency = 1
+CloverTitle.Text = "Clover Teleports ▼"
+CloverTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloverTitle.Font = Enum.Font.GothamBold
+CloverTitle.TextScaled = true
+CloverTitle.Parent = CloverFrame
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1, 0, 1, -25)
+Scroll.Position = UDim2.new(0, 0, 0, 25)
+Scroll.CanvasSize = UDim2.new(0, 0, 2, 0)
+Scroll.BackgroundTransparency = 1
+Scroll.ScrollBarThickness = 5
+Scroll.Parent = CloverFrame
+
+for i, name in ipairs({"Clover Lever 1", "Clover Lever 2", "Clover Lever 3", "Clover Lever 4", "Clover Bank"}) do
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(1, -10, 0, 35)
+Button.Position = UDim2.new(0, 5, 0, (i - 1) * 38)
+Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+Button.Text = name
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextScaled = true
+Button.Parent = Scroll
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+Button.MouseButton1Click:Connect(function()  
+	Status.Text = "Status: 🌀 Teleporting to " .. name .. "..."  
+	Status.TextColor3 = Color3.fromRGB(255, 255, 100)  
+	task.spawn(function()  
+		local target = Locations[name]  
+		while Running do  
+			local char = Player.Character  
+			if char and char:FindFirstChild("HumanoidRootPart") then  
+				local root = char.HumanoidRootPart  
+				if not isNear(root.Position, target, 5) then  
+					root.CFrame = CFrame.new(target)  
+				else  
+					Status.Text = "Status: ✅ Successfully TP’d (" .. name .. ")"  
+					Status.TextColor3 = Color3.fromRGB(100, 255, 100)  
+					break  
+				end  
+			end  
+			task.wait(1)  
+		end  
+	end)  
+end)
+
+end
+
+--================ FRAME CONTROL =================--
+CloseButton.MouseButton1Click:Connect(function()
+	Running = false
+	ScreenGui:Destroy()
+end)
+
+MinimizeButton.MouseButton1Click:Connect(function()
+	Minimized = not Minimized
+	if Minimized then
+		if CloverFrame then CloverFrame.Visible = false end
+		if Status then Status.Visible = false end
+
+		for _, obj in ipairs(Frame:GetChildren()) do
+			if obj:IsA("TextButton") and obj ~= MinimizeButton and obj ~= CloseButton then
+				obj.Visible = false
+			end
+		end
+
+		Frame:TweenSize(UDim2.new(0, 380, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		MinimizeButton.Text = "➕"
+
+	else
+		Frame:TweenSize(UDim2.new(0, 380, 0, 420), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+		task.wait(0.3)
+
+		if CloverFrame then CloverFrame.Visible = true end
+		if Status then Status.Visible = true end
+
+		for _, obj in ipairs(Frame:GetChildren()) do
+			if obj:IsA("TextButton") and obj ~= MinimizeButton and obj ~= CloseButton then
+				obj.Visible = true
+			end
+		end
+
+		MinimizeButton.Text = "➖"
+	end
+end)
+
+--// Drag
+local dragging, dragStart, startPos
+local function update(input)
+local delta = input.Position - dragStart
+Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+TitleBar.InputBegan:Connect(function(input)
+if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+dragging = true
+dragStart = input.Position
+startPos = Frame.Position
+input.Changed:Connect(function()
+if input.UserInputState == Enum.UserInputState.End then dragging = false end
+end)
+end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+update(input)
+end
+end)

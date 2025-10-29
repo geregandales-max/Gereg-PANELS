@@ -1,0 +1,398 @@
+--// ⚡ Multi TP / ESP / AIM / FLY Panel + Draggable, Minimize & Close
+--// by Vincenzo (updated: X + Minimize, Aimbot URL replaced)
+
+--// Services
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui")
+
+--// Variables
+local TPV1Loaded, TPV2Loaded, ESPLoaded, AIMLoaded, FLYLoaded = false, false, false, false, false
+local TPV1Meta, TPV2Meta, ESPMeta, AIMMeta, FLYMeta = {}, {}, {}, {}, {}
+
+--// URLs (Aimbot replaced per request)
+local URL_TPV1 = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/TP%20TO%20MADCITY"
+local URL_TPV2 = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/TP%20V2"
+local URL_ESP  = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Esp%20madcity"
+local URL_AIM  = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Aimbot%20."
+local URL_FLY  = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Flying%20mad%20city"
+
+--// UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VincenzoTPUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 260, 0, 320)
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
+
+-- Title row
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 36)
+TitleBar.Position = UDim2.new(0, 0, 0, 4)
+TitleBar.BackgroundTransparency = 1
+TitleBar.Parent = Frame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -70, 0, 30)
+Title.Position = UDim2.new(0, 8, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Vincenzo — Utilities"
+Title.TextColor3 = Color3.fromRGB(220, 220, 220)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TitleBar
+
+-- Minimize button
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 24)
+MinBtn.Position = UDim2.new(1, -70, 0, 3)
+MinBtn.AnchorPoint = Vector2.new(0, 0)
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+MinBtn.Text = "—"
+MinBtn.TextColor3 = Color3.fromRGB(230, 230, 230)
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextScaled = true
+MinBtn.Parent = TitleBar
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+
+-- Close (X) button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 24)
+CloseBtn.Position = UDim2.new(1, -36, 0, 3)
+CloseBtn.AnchorPoint = Vector2.new(0, 0)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextScaled = true
+CloseBtn.Parent = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+-- container for buttons
+local ButtonsContainer = Instance.new("Frame")
+ButtonsContainer.Size = UDim2.new(1, 0, 1, -48)
+ButtonsContainer.Position = UDim2.new(0, 0, 0, 44)
+ButtonsContainer.BackgroundTransparency = 1
+ButtonsContainer.Parent = Frame
+
+local function makeButton(yScale, text)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0.9, 0, 0, 44)
+	btn.Position = UDim2.new(0.05, 0, yScale, 0)
+	btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextScaled = true
+	btn.Parent = ButtonsContainer
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+	return btn
+end
+
+-- buttons (stacked) inside ButtonsContainer (yScale relative to ButtonsContainer)
+local TP1Button = makeButton(0.06, "⚡ TP V1")
+local TP2Button = makeButton(0.26, "⚡ TP V2")
+local ESPButton = makeButton(0.46, "👁 ESP")
+local AIMButton = makeButton(0.66, "🎯 Aimbot")
+local FLYButton = makeButton(0.86, "🪂 Fly")
+
+------------------------------------------------------
+-- Helper: snapshot and diff utilities
+------------------------------------------------------
+local function snapshotChildren(parent)
+	local t = {}
+	for _, v in ipairs(parent:GetChildren()) do
+		t[v] = true
+	end
+	return t
+end
+
+local function diffSnapshot(before, after)
+	local added = {}
+	for obj, _ in pairs(after) do
+		if not before[obj] then
+			table.insert(added, obj)
+		end
+	end
+	return added
+end
+
+-- safe loader: returns ok, {unload = func or nil, createdObjects = {...}}
+local function safeLoadAndTrack(url)
+	-- snapshot common locations
+	local beforeCore = snapshotChildren(CoreGui)
+	local beforePlayerGui = PlayerGui and snapshotChildren(PlayerGui) or {}
+	local beforeWorkspace = snapshotChildren(Workspace)
+	local beforeReplicated = snapshotChildren(ReplicatedStorage)
+	local beforeLighting = snapshotChildren(Lighting)
+
+	-- attempt to load and run; capture return value
+	local ok, ret = pcall(function()
+		local chunk = loadstring(game:HttpGet(url))
+		return chunk()
+	end)
+
+	-- snapshot after
+	local afterCore = snapshotChildren(CoreGui)
+	local afterPlayerGui = PlayerGui and snapshotChildren(PlayerGui) or {}
+	local afterWorkspace = snapshotChildren(Workspace)
+	local afterReplicated = snapshotChildren(ReplicatedStorage)
+	local afterLighting = snapshotChildren(Lighting)
+
+	-- find added objects
+	local added = {}
+	for _, v in ipairs(diffSnapshot(beforeCore, afterCore)) do table.insert(added, v) end
+	for _, v in ipairs(diffSnapshot(beforePlayerGui, afterPlayerGui)) do table.insert(added, v) end
+	for _, v in ipairs(diffSnapshot(beforeWorkspace, afterWorkspace)) do table.insert(added, v) end
+	for _, v in ipairs(diffSnapshot(beforeReplicated, afterReplicated)) do table.insert(added, v) end
+	for _, v in ipairs(diffSnapshot(beforeLighting, afterLighting)) do table.insert(added, v) end
+
+	-- result container
+	local meta = { created = added }
+
+	-- if returned value is a function, treat as unload function
+	if ok and type(ret) == "function" then
+		meta.unload = ret
+	end
+
+	if not ok then
+		warn("safeLoad error for url:", url, ret)
+		return false, meta
+	end
+
+	return true, meta
+end
+
+local function tryUnload(meta)
+	if not meta then return end
+
+	-- 1) call returned unload function if any
+	if meta.unload then
+		pcall(function() meta.unload() end)
+	end
+
+	-- 2) destroy created objects we detected
+	if meta.created then
+		for _, obj in ipairs(meta.created) do
+			pcall(function()
+				if obj and obj.Parent then
+					obj:Destroy()
+				end
+			end)
+		end
+	end
+
+	-- 3) also attempt to clear common global flags in getgenv (best-effort)
+	local genv = getgenv and getgenv() or {}
+	local tryNames = {"TPV1", "TP_V1", "GeregPanel", "Aimbot", "ESP", "FlyScript"}
+	for _, name in ipairs(tryNames) do
+		if genv[name] ~= nil then
+			pcall(function() genv[name] = nil end)
+		end
+	end
+end
+
+------------------------------------------------------
+-- Button behaviours (load -> change to Delete -> unload on delete)
+------------------------------------------------------
+-- TP V1
+TP1Button.MouseButton1Click:Connect(function()
+	if not TPV1Loaded then
+		local ok, meta = safeLoadAndTrack(URL_TPV1)
+		if ok then
+			TPV1Loaded = true
+			TPV1Meta = meta
+			TP1Button.Text = "Delete TP V1?"
+			TP1Button.BackgroundColor3 = Color3.fromRGB(205, 50, 50)
+		else
+			TP1Button.Text = "Error! Retry"
+			wait(1)
+			TP1Button.Text = "⚡ TP V1"
+		end
+	else
+		tryUnload(TPV1Meta)
+		TPV1Loaded = false
+		TPV1Meta = {}
+		TP1Button.Text = "⚡ TP V1"
+		TP1Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+end)
+
+-- TP V2
+TP2Button.MouseButton1Click:Connect(function()
+	if not TPV2Loaded then
+		local ok, meta = safeLoadAndTrack(URL_TPV2)
+		if ok then
+			TPV2Loaded = true
+			TPV2Meta = meta
+			TP2Button.Text = "Delete TP V2?"
+			TP2Button.BackgroundColor3 = Color3.fromRGB(205, 50, 50)
+		else
+			TP2Button.Text = "Error! Retry"
+			wait(1)
+			TP2Button.Text = "⚡ TP V2"
+		end
+	else
+		tryUnload(TPV2Meta)
+		TPV2Loaded = false
+		TPV2Meta = {}
+		TP2Button.Text = "⚡ TP V2"
+		TP2Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+end)
+
+-- ESP
+ESPButton.MouseButton1Click:Connect(function()
+	if not ESPLoaded then
+		local ok, meta = safeLoadAndTrack(URL_ESP)
+		if ok then
+			ESPLoaded = true
+			ESPMeta = meta
+			ESPButton.Text = "Delete ESP?"
+			ESPButton.BackgroundColor3 = Color3.fromRGB(205, 50, 50)
+		else
+			ESPButton.Text = "Error! Retry"
+			wait(1)
+			ESPButton.Text = "👁 ESP"
+		end
+	else
+		tryUnload(ESPMeta)
+		ESPLoaded = false
+		ESPMeta = {}
+		ESPButton.Text = "👁 ESP"
+		ESPButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+end)
+
+-- AIM (uses your provided Aimbot URL)
+AIMButton.MouseButton1Click:Connect(function()
+	if not AIMLoaded then
+		local ok, meta = safeLoadAndTrack(URL_AIM)
+		if ok then
+			AIMLoaded = true
+			AIMMeta = meta
+			AIMButton.Text = "Delete Aimbot?"
+			AIMButton.BackgroundColor3 = Color3.fromRGB(205, 50, 50)
+		else
+			AIMButton.Text = "Error! Retry"
+			wait(1)
+			AIMButton.Text = "🎯 Aimbot"
+		end
+	else
+		tryUnload(AIMMeta)
+		AIMLoaded = false
+		AIMMeta = {}
+		AIMButton.Text = "🎯 Aimbot"
+		AIMButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+end)
+
+-- FLY
+FLYButton.MouseButton1Click:Connect(function()
+	if not FLYLoaded then
+		local ok, meta = safeLoadAndTrack(URL_FLY)
+		if ok then
+			FLYLoaded = true
+			FLYMeta = meta
+			FLYButton.Text = "Delete Fly?"
+			FLYButton.BackgroundColor3 = Color3.fromRGB(205, 50, 50)
+		else
+			FLYButton.Text = "Error! Retry"
+			wait(1)
+			FLYButton.Text = "🪂 Fly"
+		end
+	else
+		tryUnload(FLYMeta)
+		FLYLoaded = false
+		FLYMeta = {}
+		FLYButton.Text = "🪂 Fly"
+		FLYButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+	end
+end)
+
+------------------------------------------------------
+-- Minimize & Close behavior
+------------------------------------------------------
+local minimized = false
+local originalSize = Frame.Size
+local function setMinimized(state)
+	if state == minimized then return end
+	minimized = state
+	if minimized then
+		-- hide buttons container and shrink
+		ButtonsContainer.Visible = false
+		Frame.Size = UDim2.new(Frame.Size.X.Scale, 260, 0, 44)
+		Title.Text = "Vincenzo — Utilities (min)"
+		MinBtn.Text = "+"
+	else
+		ButtonsContainer.Visible = true
+		Frame.Size = originalSize
+		Title.Text = "Vincenzo — Utilities"
+		MinBtn.Text = "—"
+	end
+end
+
+MinBtn.MouseButton1Click:Connect(function()
+	setMinimized(not minimized)
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+------------------------------------------------------
+-- 📱 Draggable Frame (Mobile + PC)
+------------------------------------------------------
+local dragging = false
+local dragStart, startPos
+
+-- allow dragging on TitleBar or Frame
+local function inputBegan(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+	end
+end
+
+local function inputChanged(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+end
+
+local function inputEnded(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end
+
+Frame.InputBegan:Connect(inputBegan)
+TitleBar.InputBegan:Connect(inputBegan)
+Frame.InputChanged:Connect(inputChanged)
+TitleBar.InputChanged:Connect(inputChanged)
+UserInputService.InputChanged:Connect(function(input) inputChanged(input) end)
+Frame.InputEnded:Connect(inputEnded)
+TitleBar.InputEnded:Connect(inputEnded)
+UserInputService.InputEnded:Connect(function(input) inputEnded(input) end)
+
+-- done

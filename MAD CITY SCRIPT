@@ -17,7 +17,7 @@ local TPV1Loaded, TPV2Loaded, ESPLoaded, AIMLoaded, FLYLoaded = false, false, fa
 local TPV1Meta, TPV2Meta, ESPMeta, AIMMeta, FLYMeta = {}, {}, {}, {}, {}
 
 --// URLs (Aimbot replaced per request)
-local URL_TPV1 = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Updated"
+local URL_TPV1 = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/TP%20v3"
 local URL_TPV2 = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/TP%20V2"
 local URL_ESP  = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Esp%20madcity"
 local URL_AIM  = "https://raw.githubusercontent.com/geregandales-max/Gereg-PANELS/refs/heads/main/Aimbot%20."

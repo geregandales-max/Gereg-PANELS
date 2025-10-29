@@ -17,7 +17,7 @@ local RoleColors = {
     Prisoners = Color3.fromRGB(255, 120, 0), -- Orange
     Police = Color3.fromRGB(0, 150, 255),   -- Blue
     Criminals = Color3.fromRGB(255, 0, 0),   -- Red
-    Heros = Color3.fromRGB(255, 255, 0),     -- Yellow
+    Heroes = Color3.fromRGB(255, 255, 0),     -- Yellow
     Villains = Color3.fromRGB(160, 0, 255)   -- Purple
 }
 

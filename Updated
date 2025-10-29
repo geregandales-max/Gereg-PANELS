@@ -273,13 +273,35 @@ CloseButton.MouseButton1Click:Connect(function()
 end)
 
 MinimizeButton.MouseButton1Click:Connect(function()
-	Minimized = not Minimized
-	Frame:TweenSize(UDim2.new(0, 380, 0, Minimized and 40 or 470), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
-	for _, v in ipairs(Frame:GetChildren()) do
-		if v ~= TitleBar then
-			v.Visible = not Minimized
-		end
-	end
+    Minimized = not Minimized
+
+    if Minimized then
+        -- hide all GUI children of Frame except TitleBar
+        for _, v in ipairs(Frame:GetChildren()) do
+            if v:IsA("GuiObject") and v ~= TitleBar then
+                v.Visible = false
+            end
+        end
+
+        -- ensure TitleBar and its main controls remain visible
+        TitleBar.Visible = true
+        if TitleText and TitleText:IsA("GuiObject") then TitleText.Visible = true end
+        if MinimizeButton and MinimizeButton:IsA("GuiObject") then MinimizeButton.Visible = true end
+        if CloseButton and CloseButton:IsA("GuiObject") then CloseButton.Visible = true end
+
+        Frame:TweenSize(UDim2.new(0, 380, 0, 40), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        MinimizeButton.Text = "➕"
+    else
+        -- restore visibility of all GUI children
+        for _, v in ipairs(Frame:GetChildren()) do
+            if v:IsA("GuiObject") then
+                v.Visible = true
+            end
+        end
+
+        Frame:TweenSize(UDim2.new(0, 380, 0, 470), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.3, true)
+        MinimizeButton.Text = "➖"
+    end
 end)
 
 --// Dragging

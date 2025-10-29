@@ -1,0 +1,123 @@
+--// 🚪 Walk Through Walls Toggle (Noclip) + Draggable UI
+--// by Vincenzo
+
+--// Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+
+--// Variables
+local Noclipping = false
+local Running = true
+
+--// UI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VincenzoNoclipUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 250, 0, 100)
+Frame.Position = UDim2.new(0.5, -125, 0.8, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = false -- we'll handle manually for mobile support
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 10)
+
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(0.9, 0, 0, 50)
+Button.Position = UDim2.new(0.05, 0, 0.1, 0)
+Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Button.Text = "🚪 Noclip: OFF"
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextScaled = true
+Button.Parent = Frame
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, 0, 0, 30)
+Status.Position = UDim2.new(0, 0, 0.65, 0)
+Status.BackgroundTransparency = 1
+Status.Text = "Status: ❌ OFF"
+Status.TextColor3 = Color3.fromRGB(255, 100, 100)
+Status.Font = Enum.Font.GothamBold
+Status.TextScaled = true
+Status.Parent = Frame
+
+------------------------------------------------------
+-- 🚪 Noclip Logic
+------------------------------------------------------
+local function setNoclip(state)
+	Noclipping = state
+	if Noclipping then
+		Button.Text = "🚪 Noclip: ON"
+		Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+		Status.Text = "Status: ✅ Walking Through Walls"
+		Status.TextColor3 = Color3.fromRGB(100, 255, 100)
+	else
+		Button.Text = "🚪 Noclip: OFF"
+		Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		Status.Text = "Status: ❌ OFF"
+		Status.TextColor3 = Color3.fromRGB(255, 100, 100)
+	end
+end
+
+--// Toggle with button
+Button.MouseButton1Click:Connect(function()
+	setNoclip(not Noclipping)
+end)
+
+--// Keybind (N)
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.N then
+		setNoclip(not Noclipping)
+	end
+end)
+
+--// Disable collision when Noclip is active
+RunService.Stepped:Connect(function()
+	if Noclipping and Character then
+		for _, part in ipairs(Character:GetDescendants()) do
+			if part:IsA("BasePart") then
+				part.CanCollide = false
+			end
+		end
+	end
+end)
+
+--// Refresh character after respawn
+Player.CharacterAdded:Connect(function(char)
+	Character = char
+end)
+
+------------------------------------------------------
+-- 📱 Draggable Frame (Mobile + PC)
+------------------------------------------------------
+local draggingUI = false
+local dragStart, startPos
+
+Frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingUI = true
+		dragStart = input.Position
+		startPos = Frame.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if draggingUI and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingUI = false
+	end
+end)

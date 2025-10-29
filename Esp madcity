@@ -1,0 +1,192 @@
+--// 🔍 Mobile ESP Panel (Box + Line + Name + Distance + Draggable)
+--// by Vincenzo
+
+--// Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+--// ESP Settings
+local ESPEnabled = false
+local ESPObjects = {}
+
+--// Role Colors
+local RoleColors = {
+    Prisoners = Color3.fromRGB(255, 120, 0), -- Orange
+    Police = Color3.fromRGB(0, 150, 255),   -- Blue
+    Criminals = Color3.fromRGB(255, 0, 0),   -- Red
+    Heros = Color3.fromRGB(255, 255, 0),     -- Yellow
+    Villains = Color3.fromRGB(160, 0, 255)   -- Purple
+}
+
+--// Helper
+local function getRole(player)
+    local role = "Unknown"
+    pcall(function()
+        role = player.Team and player.Team.Name or "Unknown"
+    end)
+    return role
+end
+
+--// Create ESP for each player
+local function createESP(player)
+    if player == LocalPlayer then return end
+    if ESPObjects[player] then return end
+
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Thickness = 2
+    box.Filled = false
+
+    local tracer = Drawing.new("Line")
+    tracer.Visible = false
+    tracer.Thickness = 1
+
+    local nameText = Drawing.new("Text")
+    nameText.Visible = false
+    nameText.Size = 16
+    nameText.Center = true
+    nameText.Outline = true
+
+    ESPObjects[player] = {Box = box, Tracer = tracer, Name = nameText}
+
+    RunService.RenderStepped:Connect(function()
+        if not ESPEnabled then
+            box.Visible = false
+            tracer.Visible = false
+            nameText.Visible = false
+            return
+        end
+
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local hrp = character.HumanoidRootPart
+            local vector, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+            local color = RoleColors[getRole(player)] or Color3.fromRGB(255, 255, 255)
+
+            if onScreen then
+                local distance = (LocalPlayer:DistanceFromCharacter(hrp.Position))
+                local scale = 1 / (vector.Z / 500)
+                local boxSize = math.clamp(60 * scale, 30, 300)
+                local boxPos = Vector2.new(vector.X - boxSize / 2, vector.Y - boxSize / 2)
+
+                -- Box
+                box.Visible = true
+                box.Color = color
+                box.Size = Vector2.new(boxSize, boxSize * 1.5)
+                box.Position = boxPos
+
+                -- Tracer
+                tracer.Visible = true
+                tracer.Color = color
+                tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                tracer.To = Vector2.new(vector.X, vector.Y)
+
+                -- Name + Distance
+                nameText.Visible = true
+                nameText.Color = color
+                nameText.Text = string.format("%s | %.0f studs", player.Name, distance)
+                nameText.Position = Vector2.new(vector.X, boxPos.Y - 15)
+            else
+                box.Visible = false
+                tracer.Visible = false
+                nameText.Visible = false
+            end
+        else
+            box.Visible = false
+            tracer.Visible = false
+            nameText.Visible = false
+        end
+    end)
+end
+
+--// Remove ESP
+local function removeESP(player)
+    if ESPObjects[player] then
+        for _, v in pairs(ESPObjects[player]) do
+            v:Remove()
+        end
+        ESPObjects[player] = nil
+    end
+end
+
+--// Initialize existing players
+for _, player in pairs(Players:GetPlayers()) do
+    createESP(player)
+end
+
+--// Listen for player join/leave
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+--// 📱 Create Toggle UI (Draggable + Centered)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VincenzoESP"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Size = UDim2.new(0, 150, 0, 50)
+ToggleButton.Position = UDim2.new(0.5, -75, 0.5, -25) -- Centered
+ToggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.GothamBold
+ToggleButton.TextScaled = true
+ToggleButton.Text = "ESP: OFF"
+ToggleButton.Parent = ScreenGui
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 12)
+
+--// Toggle ESP
+ToggleButton.MouseButton1Click:Connect(function()
+    ESPEnabled = not ESPEnabled
+    if ESPEnabled then
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
+        ToggleButton.Text = "ESP: ON"
+    else
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(170, 0, 0)
+        ToggleButton.Text = "ESP: OFF"
+    end
+end)
+
+--// Draggable System (Mobile + PC)
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    ToggleButton.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
+end
+
+ToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = ToggleButton.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+ToggleButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+print("✅ ESP Loaded (Mobile + Draggable + Centered). Tap button to toggle ESP.")

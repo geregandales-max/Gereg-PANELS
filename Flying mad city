@@ -1,0 +1,193 @@
+--// 🕊️ Fly Script (Mobile + PC) with Speed Slider + Draggable UI
+--// by Vincenzo
+
+--// Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local Player = Players.LocalPlayer
+local PlayerModule = require(Player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule"))
+local Controls = PlayerModule:GetControls()
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+--// Variables
+local Flying = false
+local Speed = 50
+local BodyGyro, BodyVelocity
+
+--// UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VincenzoFlyUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 280, 0, 150)
+Frame.Position = UDim2.new(0.5, -140, 0.8, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.Active = true
+Frame.Draggable = false -- We'll handle dragging manually (better for mobile)
+Frame.Parent = ScreenGui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+--// Fly Button
+local Button = Instance.new("TextButton")
+Button.Size = UDim2.new(1, -20, 0, 50)
+Button.Position = UDim2.new(0, 10, 0, 10)
+Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Button.Text = "🕊️ Fly: OFF"
+Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+Button.Font = Enum.Font.GothamBold
+Button.TextScaled = true
+Button.Parent = Frame
+Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8)
+
+--// Speed Label
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, -20, 0, 20)
+SpeedLabel.Position = UDim2.new(0, 10, 0, 70)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Speed: " .. Speed
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Font = Enum.Font.Gotham
+SpeedLabel.TextScaled = true
+SpeedLabel.Parent = Frame
+
+--// Slider Background
+local SliderBack = Instance.new("Frame")
+SliderBack.Size = UDim2.new(1, -20, 0, 10)
+SliderBack.Position = UDim2.new(0, 10, 0, 100)
+SliderBack.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+SliderBack.Parent = Frame
+Instance.new("UICorner", SliderBack).CornerRadius = UDim.new(0, 5)
+
+--// Slider Fill
+local SliderFill = Instance.new("Frame")
+SliderFill.Size = UDim2.new(Speed / 200, 0, 1, 0)
+SliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+SliderFill.Parent = SliderBack
+Instance.new("UICorner", SliderFill).CornerRadius = UDim.new(0, 5)
+
+--// Slider Button
+local SliderButton = Instance.new("ImageButton")
+SliderButton.Size = UDim2.new(0, 20, 0, 20)
+SliderButton.Position = UDim2.new(Speed / 200, -10, -0.5, 0)
+SliderButton.Image = "rbxassetid://7072718362"
+SliderButton.BackgroundTransparency = 1
+SliderButton.Parent = SliderBack
+
+------------------------------------------------------
+-- 🕹️ Fly Toggle
+------------------------------------------------------
+local function toggleFly()
+	Flying = not Flying
+
+	if Flying then
+		Button.Text = "🕊️ Fly: ON"
+		Button.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+
+		BodyGyro = Instance.new("BodyGyro")
+		BodyGyro.P = 9e4
+		BodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+		BodyGyro.CFrame = HumanoidRootPart.CFrame
+		BodyGyro.Parent = HumanoidRootPart
+
+		BodyVelocity = Instance.new("BodyVelocity")
+		BodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+		BodyVelocity.Velocity = Vector3.zero
+		BodyVelocity.Parent = HumanoidRootPart
+
+		task.spawn(function()
+			while Flying and task.wait() do
+				local camera = workspace.CurrentCamera
+				local moveDir = Controls:GetMoveVector()
+				local moveVector = (camera.CFrame.RightVector * moveDir.X) + (camera.CFrame.LookVector * -moveDir.Z)
+
+				if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+					moveVector += Vector3.new(0, 1, 0)
+				elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+					moveVector -= Vector3.new(0, 1, 0)
+				end
+
+				if moveVector.Magnitude > 0 then
+					moveVector = moveVector.Unit * Speed
+				end
+
+				BodyVelocity.Velocity = moveVector
+				BodyGyro.CFrame = camera.CFrame
+			end
+		end)
+	else
+		Button.Text = "🕊️ Fly: OFF"
+		Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		if BodyGyro then BodyGyro:Destroy() end
+		if BodyVelocity then BodyVelocity:Destroy() end
+	end
+end
+
+Button.MouseButton1Click:Connect(toggleFly)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if not processed and input.KeyCode == Enum.KeyCode.F then
+		toggleFly()
+	end
+end)
+
+------------------------------------------------------
+-- 🎚️ Speed Slider
+------------------------------------------------------
+local dragging = false
+
+local function updateSlider(x)
+	local relativeX = math.clamp(x - SliderBack.AbsolutePosition.X, 0, SliderBack.AbsoluteSize.X)
+	local percent = relativeX / SliderBack.AbsoluteSize.X
+	Speed = math.floor(percent * 200)
+	SpeedLabel.Text = "Speed: " .. Speed
+	SliderFill.Size = UDim2.new(percent, 0, 1, 0)
+	SliderButton.Position = UDim2.new(percent, -10, -0.5, 0)
+end
+
+SliderButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		updateSlider(input.Position.X)
+	end
+end)
+
+------------------------------------------------------
+-- 📱 Draggable Frame (Mobile + PC)
+------------------------------------------------------
+local draggingUI = false
+local dragStart, startPos
+
+Frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingUI = true
+		dragStart = input.Position
+		startPos = Frame.Position
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if draggingUI and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		draggingUI = false
+	end
+end)

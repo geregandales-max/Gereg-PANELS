@@ -10,7 +10,7 @@ local Player = Players.LocalPlayer
 --// Variables
 local Running = true
 local Minimized = false
-local TweenSpeed = 250 -- 🌀 Adjust this to make tween faster/slower (higher = slower)
+local TweenSpeed = 200 -- 🌀 Adjust this to make tween faster/slower (higher = slower)
 local AutoTPs = {
     ["Disco"] = false,
     ["Crim Base"] = false,

@@ -1,19 +1,32 @@
---// 💎 Auto TP Panel (Pyramid + Gem)
+--// 💎 Auto TP Panel (Pyramid + Gem) - Tween + Noclip + Stop
 --// by Vincenzo
 
 --// Services
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local Player = Players.LocalPlayer
 
 --// Variables
 local Running = true
 local Minimized = false
+local TweenSpeed = 100 -- 🌀 Higher = slower movement
 local AutoTPPyramid = false
 local AutoTPGem = false
 
+local activeTween = nil
+
 local PyramidPos = Vector3.new(-1046.108154296875, 17.30853271484375, -496.2271728515625)
 local GemPos = Vector3.new(-86.12039947509766, 25.12676239013672, 800.6677856445312)
+
+--// Helpers
+local function enableNoclip(char, state)
+	for _, part in ipairs(char:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = not state
+		end
+	end
+end
 
 local function isNear(pos1, pos2, threshold)
 	return (pos1 - pos2).Magnitude <= threshold
@@ -99,52 +112,84 @@ Status.Font = Enum.Font.GothamBold
 Status.TextScaled = true
 Status.Parent = Frame
 
---// Button Functions
-local function startAutoTP(targetPos, name)
+--// Tween Teleport Function
+local function tweenTeleport(targetPos, name, buttonRef)
 	local char = Player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 	local root = char.HumanoidRootPart
-	if not isNear(root.Position, targetPos, 5) then
-		root.CFrame = CFrame.new(targetPos)
-		Status.Text = "Status: ✅ Arrived at " .. name
-		Status.TextColor3 = Color3.fromRGB(100, 255, 100)
-	else
-		Status.Text = "Status: 🌀 Already at " .. name
-		Status.TextColor3 = Color3.fromRGB(255, 255, 150)
+	enableNoclip(char, true)
+
+	local distance = (root.Position - targetPos).Magnitude
+	local tweenInfo = TweenInfo.new(distance / TweenSpeed, Enum.EasingStyle.Linear)
+	local goal = {CFrame = CFrame.new(targetPos)}
+	activeTween = TweenService:Create(root, tweenInfo, goal)
+	activeTween:Play()
+
+	Status.Text = "Status: 🌀 Teleporting to " .. name .. "..."
+	Status.TextColor3 = Color3.fromRGB(255, 255, 100)
+
+	while activeTween.PlaybackState == Enum.PlaybackState.Playing do
+		if not AutoTPPyramid and not AutoTPGem then
+			activeTween:Cancel()
+			enableNoclip(char, false)
+			Status.Text = "Status: ❌ OFF"
+			Status.TextColor3 = Color3.fromRGB(255, 80, 80)
+			buttonRef.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			buttonRef.Text = buttonRef.Text:gsub(": ON", ": OFF")
+			return
+		end
+		task.wait(0.1)
 	end
+
+	enableNoclip(char, false)
+	Status.Text = "Status: ✅ Arrived at " .. name
+	Status.TextColor3 = Color3.fromRGB(100, 255, 100)
+	buttonRef.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	buttonRef.Text = buttonRef.Text:gsub(": ON", ": OFF")
+	AutoTPPyramid = false
+	AutoTPGem = false
 end
 
+--// Buttons Logic
 PyramidButton.MouseButton1Click:Connect(function()
+	if activeTween then activeTween:Cancel() end
+	AutoTPGem = false
 	AutoTPPyramid = not AutoTPPyramid
+
 	if AutoTPPyramid then
 		PyramidButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 		PyramidButton.Text = "Auto TP Pyramid: ON"
-		Status.Text = "Status: 🌀 Teleporting to Pyramid..."
-		startAutoTP(PyramidPos, "Pyramid Gate")
-		task.wait(1)
-		AutoTPPyramid = false
-		PyramidButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-		PyramidButton.Text = "Auto TP Pyramid: OFF"
+		task.spawn(function()
+			tweenTeleport(PyramidPos, "Pyramid Gate", PyramidButton)
+		end)
 	else
+		if activeTween then activeTween:Cancel() end
+		enableNoclip(Player.Character, false)
 		PyramidButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 		PyramidButton.Text = "Auto TP Pyramid: OFF"
+		Status.Text = "Status: ❌ OFF"
+		Status.TextColor3 = Color3.fromRGB(255, 80, 80)
 	end
 end)
 
 GemButton.MouseButton1Click:Connect(function()
+	if activeTween then activeTween:Cancel() end
+	AutoTPPyramid = false
 	AutoTPGem = not AutoTPGem
+
 	if AutoTPGem then
 		GemButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
 		GemButton.Text = "Auto TP Gem: ON"
-		Status.Text = "Status: 🌀 Teleporting to Gem..."
-		startAutoTP(GemPos, "Gem Area")
-		task.wait(1)
-		AutoTPGem = false
-		GemButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-		GemButton.Text = "Auto TP Gem: OFF"
+		task.spawn(function()
+			tweenTeleport(GemPos, "Gem Area", GemButton)
+		end)
 	else
+		if activeTween then activeTween:Cancel() end
+		enableNoclip(Player.Character, false)
 		GemButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 		GemButton.Text = "Auto TP Gem: OFF"
+		Status.Text = "Status: ❌ OFF"
+		Status.TextColor3 = Color3.fromRGB(255, 80, 80)
 	end
 end)
 

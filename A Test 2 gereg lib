@@ -1,0 +1,224 @@
+--// 🌟 VincenzoLib UI Framework (Fixed + Working)
+--// by Vincenzo
+
+local VincenzoLib = {}
+
+function VincenzoLib:NewWindow(title)
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Parent = game.CoreGui
+	ScreenGui.Name = "VincenzoLibUI"
+	ScreenGui.ResetOnSpawn = false
+
+	local Frame = Instance.new("Frame")
+	Frame.Size = UDim2.new(0, 400, 0, 340)
+	Frame.Position = UDim2.new(0.5, -200, 0.5, -170)
+	Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+	Frame.Parent = ScreenGui
+	Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 12)
+
+	-- Title Bar
+	local TitleBar = Instance.new("Frame")
+	TitleBar.Size = UDim2.new(1, 0, 0, 40)
+	TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+	TitleBar.Parent = Frame
+	Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+
+	local Title = Instance.new("TextLabel")
+	Title.Text = title or "Vincenzo UI"
+	Title.Size = UDim2.new(1, -80, 1, 0)
+	Title.Position = UDim2.new(0, 10, 0, 0)
+	Title.BackgroundTransparency = 1
+	Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	Title.Font = Enum.Font.GothamBold
+	Title.TextScaled = true
+	Title.TextXAlignment = Enum.TextXAlignment.Left
+	Title.Parent = TitleBar
+
+	-- Buttons
+	local CloseBtn = Instance.new("TextButton")
+	CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+	CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+	CloseBtn.Text = "X"
+	CloseBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+	CloseBtn.Font = Enum.Font.GothamBold
+	CloseBtn.TextScaled = true
+	CloseBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	CloseBtn.Parent = TitleBar
+	Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
+
+	local MinBtn = Instance.new("TextButton")
+	MinBtn.Size = UDim2.new(0, 30, 0, 30)
+	MinBtn.Position = UDim2.new(1, -70, 0, 5)
+	MinBtn.Text = "-"
+	MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	MinBtn.Font = Enum.Font.GothamBold
+	MinBtn.TextScaled = true
+	MinBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+	MinBtn.Parent = TitleBar
+	Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
+
+	local TabsFrame = Instance.new("Frame")
+	TabsFrame.Size = UDim2.new(1, 0, 0, 40)
+	TabsFrame.Position = UDim2.new(0, 0, 0, 40)
+	TabsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	TabsFrame.Parent = Frame
+
+	local Tabs = {}
+	local Contents = {}
+	local TabX = 0
+	local Minimized = false
+
+	function Tabs:NewTab(tabname)
+		local Button = Instance.new("TextButton")
+		Button.Size = UDim2.new(0, 120, 1, 0)
+		Button.Position = UDim2.new(0, TabX, 0, 0)
+		Button.Text = tabname
+		Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+		Button.Font = Enum.Font.GothamBold
+		Button.TextScaled = true
+		Button.Parent = TabsFrame
+		TabX += 120
+
+		local Content = Instance.new("ScrollingFrame")
+		Content.Size = UDim2.new(1, 0, 1, -80)
+		Content.Position = UDim2.new(0, 0, 0, 80)
+		Content.BackgroundTransparency = 1
+		Content.CanvasSize = UDim2.new(0, 0, 0, 400)
+		Content.ScrollBarThickness = 5
+		Content.Parent = Frame
+		Content.Visible = (#Contents == 0) -- first tab visible
+		table.insert(Contents, Content)
+
+		Button.MouseButton1Click:Connect(function()
+			for _, c in ipairs(Contents) do
+				c.Visible = false
+			end
+			Content.Visible = true
+		end)
+
+		local y = 10
+		local Tab = {}
+
+		function Tab:CreateTextbox(placeholder, callback)
+			local box = Instance.new("TextBox")
+			box.Size = UDim2.new(0.8, 0, 0, 35)
+			box.Position = UDim2.new(0.1, 0, 0, y)
+			box.PlaceholderText = placeholder
+			box.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			box.TextColor3 = Color3.fromRGB(255, 255, 255)
+			box.Font = Enum.Font.Gotham
+			box.TextScaled = true
+			box.Parent = Content
+			Instance.new("UICorner", box).CornerRadius = UDim.new(0, 8)
+			box.FocusLost:Connect(function()
+				callback(box.Text)
+			end)
+			y += 45
+			Content.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+			return box
+		end
+
+		function Tab:CreateButton(text, callback)
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(0.8, 0, 0, 40)
+			btn.Position = UDim2.new(0.1, 0, 0, y)
+			btn.Text = text
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.Font = Enum.Font.GothamBold
+			btn.TextScaled = true
+			btn.Parent = Content
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+			btn.MouseButton1Click:Connect(callback)
+			y += 50
+			Content.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+			return btn
+		end
+
+		function Tab:CreateToggle(name, callback)
+			local state = false
+			local btn = Instance.new("TextButton")
+			btn.Size = UDim2.new(0.8, 0, 0, 40)
+			btn.Position = UDim2.new(0.1, 0, 0, y)
+			btn.Text = name .. ": ❌ OFF"
+			btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+			btn.Font = Enum.Font.GothamBold
+			btn.TextScaled = true
+			btn.Parent = Content
+			Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+			btn.MouseButton1Click:Connect(function()
+				state = not state
+				btn.Text = name .. (state and ": ✅ ON" or ": ❌ OFF")
+				btn.BackgroundColor3 = state and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(40, 40, 40)
+				callback(state)
+			end)
+			y += 50
+			Content.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+			return btn
+		end
+
+		function Tab:CreateStatus(labelText, default)
+			local status = Instance.new("TextLabel")
+			status.Size = UDim2.new(1, 0, 0, 40)
+			status.Position = UDim2.new(0, 0, 0, y)
+			status.BackgroundTransparency = 1
+			status.Text = labelText .. ": " .. (default or "❌ OFF")
+			status.TextColor3 = Color3.fromRGB(255, 80, 80)
+			status.Font = Enum.Font.GothamBold
+			status.TextScaled = true
+			status.Parent = Content
+			y += 45
+			Content.CanvasSize = UDim2.new(0, 0, 0, y + 50)
+			function status:SetText(text, active)
+				status.Text = labelText .. ": " .. text
+				status.TextColor3 = active and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 80, 80)
+			end
+			return status
+		end
+
+		return Tab
+	end
+
+	-- Minimize Logic (works now)
+	MinBtn.MouseButton1Click:Connect(function()
+		Minimized = not Minimized
+		for _, v in ipairs(Frame:GetChildren()) do
+			if v ~= TitleBar then
+				v.Visible = not Minimized
+			end
+		end
+		Frame.Size = Minimized and UDim2.new(0, 400, 0, 40) or UDim2.new(0, 400, 0, 340)
+	end)
+
+	CloseBtn.MouseButton1Click:Connect(function()
+		ScreenGui:Destroy()
+	end)
+
+	-- Dragging
+	local UIS = game:GetService("UserInputService")
+	local dragging, dragStart, startPos
+	TitleBar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = Frame.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+
+	return Tabs
+end
+
+return VincenzoLib
